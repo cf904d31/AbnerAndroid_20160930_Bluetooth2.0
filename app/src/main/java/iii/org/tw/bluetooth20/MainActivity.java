@@ -15,12 +15,15 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
@@ -38,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private int[] to = {R.id.item_name,R.id.item_addr,R.id.item_type};
     private LinkedList<HashMap<String,Object>> data;
     private MyBTReceiver receiver;
+    private AcceptThread serverThread;
 
     private UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     //-----此UUID是安卓手機通用的
@@ -109,6 +113,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 BluetoothDevice remoteDevice = (BluetoothDevice) data.get(position).get("device");
+                ConnectThread clientThread = new ConnectThread(remoteDevice);
+                clientThread.start();
             }
         });
     }
@@ -193,6 +199,9 @@ public class MainActivity extends AppCompatActivity {
         if (isSupportBT && !isBTInitEnabled) {
             mBluetoothAdapter.disable();
         }
+        if (serverThread != null) {
+            serverThread.cancel();
+        }
         super.finish();
     }
 
@@ -209,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void asServer(View v) {
-        AcceptThread serverThread = new AcceptThread();
+        serverThread = new AcceptThread();
         serverThread.start();
     }
 
@@ -234,8 +243,14 @@ public class MainActivity extends AppCompatActivity {
             while (true) {
                 try {
                     socket = mmServerSocket.accept();
+                    Log.d("Abner","Connecting as a server  Success");
+                    InputStream in = socket.getInputStream();
+                    byte[] buf = new byte[1024];
+                    int len = in.read(buf);
+                    Log.d("Abner",new String(buf,0,len));
+                    in.close();
                 } catch (IOException e) {
-                    break;
+                    //break;
                 }
                 // If a connection was accepted
 //                if (socket != null) {
@@ -251,6 +266,57 @@ public class MainActivity extends AppCompatActivity {
         public void cancel() {
             try {
                 mmServerSocket.close();
+            } catch (IOException e) { }
+        }
+    }
+
+
+    private class ConnectThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final BluetoothDevice mmDevice;
+
+        public ConnectThread(BluetoothDevice device) {
+            // Use a temporary object that is later assigned to mmSocket,
+            // because mmSocket is final
+            BluetoothSocket tmp = null;
+            mmDevice = device;
+
+            // Get a BluetoothSocket to connect with the given BluetoothDevice
+            try {
+                // MY_UUID is the app's UUID string, also used by the server code
+                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
+            } catch (IOException e) { }
+            mmSocket = tmp;
+        }
+
+        public void run() {
+            // Cancel discovery because it will slow down the connection
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                // Connect the device through the socket. This will block
+                // until it succeeds or throws an exception
+                mmSocket.connect();
+                Log.d("Abner","Connecting as a client  Success");
+                OutputStream out = mmSocket.getOutputStream();
+                out.flush();
+                out.close();
+            } catch (IOException connectException) {
+                // Unable to connect; close the socket and get out
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException) { }
+                return;
+            }
+
+            // Do work to manage the connection (in a separate thread)
+            //manageConnectedSocket(mmSocket);
+        }
+
+        /** Will cancel an in-progress connection, and close the socket */
+        public void cancel() {
+            try {
+                mmSocket.close();
             } catch (IOException e) { }
         }
     }
