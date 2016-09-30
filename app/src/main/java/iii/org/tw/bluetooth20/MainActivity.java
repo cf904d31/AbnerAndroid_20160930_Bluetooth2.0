@@ -2,7 +2,10 @@ package iii.org.tw.bluetooth20;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -24,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private String[] from = {"name","addr","type"};
     private int[] to = {R.id.item_name,R.id.item_addr,R.id.item_type};
     private LinkedList<HashMap<String,String>> data;
+    private MyBTReceiver receiver;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,7 +36,30 @@ public class MainActivity extends AppCompatActivity {
         startBT();
         listDevices = (ListView)findViewById(R.id.listDevices);
         initListView();
+        receiver = new MyBTReceiver();
+
     }
+
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(receiver, filter); // Don't forget to unregister during onDestroy
+    }
+
+    @Override
+    protected void onPause() {
+        if (isSupportBT && mBluetoothAdapter.isDiscovering()) {
+            mBluetoothAdapter.cancelDiscovery();
+        }
+
+        unregisterReceiver(receiver);
+        super.onPause();
+    }
+
+
 
     private void initListView() {
         data = new LinkedList<>();
@@ -41,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void scanPaired(View v) {
+        data.clear();
 
         //------Querying paired devices
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
@@ -55,6 +83,20 @@ public class MainActivity extends AppCompatActivity {
 
 
         //------Discovering devices
+        mBluetoothAdapter.startDiscovery();
+    }
+
+    private class MyBTReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            HashMap<String,String> item = new HashMap<>();
+            item.put(from[0], device.getName());
+            item.put(from[1], device.getAddress());
+            item.put(from[2], "scan");
+            data.add(item);
+            adapter.notifyDataSetChanged();
+        }
     }
 
 
