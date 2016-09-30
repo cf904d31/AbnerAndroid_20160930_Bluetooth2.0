@@ -117,16 +117,25 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothAdapter.startDiscovery();
     }
 
+    public void enableDiscoverability(View v) {
+        Intent discoverableIntent = new
+        Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+        startActivity(discoverableIntent);
+    }
+
     private class MyBTReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-            HashMap<String,String> item = new HashMap<>();
-            item.put(from[0], device.getName());
-            item.put(from[1], device.getAddress());
-            item.put(from[2], "scan");
-            data.add(item);
-            adapter.notifyDataSetChanged();
+            if (!isBTNameExists(device.getName())) {
+                HashMap<String, String> item = new HashMap<>();
+                item.put(from[0], device.getName());
+                item.put(from[1], device.getAddress());
+                item.put(from[2], "scan");
+                data.add(item);
+                adapter.notifyDataSetChanged();
+            }
         }
     }
 
@@ -168,5 +177,16 @@ public class MainActivity extends AppCompatActivity {
             mBluetoothAdapter.disable();
         }
         super.finish();
+    }
+
+    private boolean isBTNameExists (String name) {
+        boolean isExists = false;
+        for (HashMap<String,String> devices : data) {
+            if (devices.get(from[1]).equals(name)) {
+                isExists = true;
+                break;
+            }
+        }
+        return isExists;
     }
 }

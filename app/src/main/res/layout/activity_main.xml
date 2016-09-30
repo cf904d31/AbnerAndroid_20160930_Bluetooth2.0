@@ -10,6 +10,11 @@
         android:layout_height="wrap_content"
         android:text="QueryingPaired"
         android:onClick="scanPaired"/>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="讓藍芽裝置可被搜尋"
+        android:onClick="enableDiscoverability"/>
     <ListView
         android:id="@+id/listDevices"
         android:layout_width="match_parent"
