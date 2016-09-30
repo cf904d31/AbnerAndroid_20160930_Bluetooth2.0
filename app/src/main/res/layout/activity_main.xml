@@ -15,6 +15,11 @@
         android:layout_height="wrap_content"
         android:text="讓藍芽裝置可被搜尋"
         android:onClick="enableDiscoverability"/>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="asServer"
+        android:text="As a Server"/>
     <ListView
         android:id="@+id/listDevices"
         android:layout_width="match_parent"
